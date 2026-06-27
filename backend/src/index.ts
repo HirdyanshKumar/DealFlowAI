@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { testDbConnection, bootstrapAdminUser } from './db';
 import sessionsRouter from './routes/sessions';
 import adminRouter from './routes/admin';
+import webhooksRouter from './routes/webhooks';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,7 +15,13 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json());
+
+// Configure JSON body parser with a custom verify function to store req.rawBody
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // Rate limit: apply to all public chatbot routes
 const publicLimiter = rateLimit({
@@ -51,6 +58,9 @@ app.use('/sessions', publicLimiter, sessionsRouter);
 
 // Admin dashboard API
 app.use('/admin', adminRouter);
+
+// Webhook endpoints (Cal.com, etc.)
+app.use('/webhooks', webhooksRouter);
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {

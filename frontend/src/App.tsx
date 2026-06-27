@@ -218,7 +218,9 @@ function App() {
 
   // Intercept and render Admin Dashboard if route matches
   if (path.startsWith('/admin')) {
-    return <AdminDashboard navigate={navigate} />;
+    const match = path.match(/^\/admin\/leads\/([a-fA-F0-9-]{36})/);
+    const initialLeadId = match ? match[1] : undefined;
+    return <AdminDashboard navigate={navigate} initialLeadId={initialLeadId} />;
   }
 
   // Render Start Screen
