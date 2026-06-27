@@ -1,23 +1,32 @@
+import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 
-/**
- * Returns a Neon SQL query function bound to DATABASE_URL.
- * Throws clearly if the env var is missing.
- */
-export function getDb() {
+// ── Neon HTTP client (used by /health — stateless, no connection overhead) ──
+export function getNeonSql() {
   const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error('DATABASE_URL is not set. Check your .env file.');
-  }
+  if (!url) throw new Error('DATABASE_URL is not set. Check your .env file.');
   return neon(url);
 }
 
-/**
- * Runs a trivial query to confirm the Neon connection works.
- * Called by GET /health.
- */
 export async function testDbConnection(): Promise<void> {
-  const sql = getDb();
-  // SELECT 1 — cheapest possible round-trip
+  const sql = getNeonSql();
   await sql`SELECT 1`;
+}
+
+// ── pg Pool (used by API routes — persistent TCP connection, proper pooling) ─
+let _pool: Pool | null = null;
+
+export function getPool(): Pool {
+  if (_pool) return _pool;
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL is not set. Check your .env file.');
+  _pool = new Pool({
+    connectionString: url,
+    max: 10,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 5_000,
+    ssl: { rejectUnauthorized: false },
+  });
+  return _pool;
 }

@@ -3,27 +3,28 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { testDbConnection } from './db';
+import sessionsRouter from './routes/sessions';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ── Middleware ────────────────────────────────────────────────
+// ── Middleware ─────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
 }));
 app.use(express.json());
 
-// Rate-limit public routes (will be applied per-router in Phase 3)
-export const publicLimiter = rateLimit({
+// Rate limit: apply to all public chatbot routes
+const publicLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
-  max: 100,
+  max: 100,                  // 100 req / IP / window
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' },
+  message: { error: 'Too many requests — please try again in a few minutes.' },
 });
 
-// ── Routes ────────────────────────────────────────────────────
+// ── Routes ─────────────────────────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {
   let dbStatus = 'unknown';
   let dbLatencyMs: number | null = null;
@@ -40,17 +41,18 @@ app.get('/health', async (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    db: {
-      status: dbStatus,
-      latencyMs: dbLatencyMs,
-    },
+    db: { status: dbStatus, latencyMs: dbLatencyMs },
   });
 });
 
-// ── Start ─────────────────────────────────────────────────────
+// Public chatbot API — rate-limited
+app.use('/sessions', publicLimiter, sessionsRouter);
+
+// ── Start ──────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`✅  Venturizer backend running on http://localhost:${PORT}`);
-  console.log(`    GET http://localhost:${PORT}/health`);
+  console.log(`    GET  http://localhost:${PORT}/health`);
+  console.log(`    POST http://localhost:${PORT}/sessions`);
 });
 
 export default app;
