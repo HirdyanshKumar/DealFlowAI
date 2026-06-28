@@ -38,17 +38,13 @@ This project replaces manual triage with:
 
 ## Application Flow Diagram
 
-> Paste your Easel.io diagram below once exported.
+<img width="2634" height="2277" alt="image" src="https://github.com/user-attachments/assets/2d27ac3d-6b2d-451a-9e0c-90b44e391775" />
 
-![Application Flow Diagram](./flow-diagram.png)
-![alt text](image.png)
 ---
 
 ## Demo Video
 
-> Add your Loom / YouTube video link here.
-
-[![Watch the demo](https://img.shields.io/badge/Watch-Demo%20Video-red?style=for-the-badge&logo=youtube)](YOUR_VIDEO_LINK_HERE)
+[![Watch the demo](https://img.shields.io/badge/Watch-Demo%20Video-red?style=for-the-badge&logo=youtube)](https://youtu.be/W-ea9Dg6HGM)
 
 ---
 
