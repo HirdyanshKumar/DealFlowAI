@@ -12,12 +12,12 @@ export interface EmailPayload {
 }
 
 /**
- * Sends a bucket-specific email to the lead using the Resend API.
+ * Sends a bucket-specific email to the lead using the Brevo (Sendinblue) API.
  */
 export async function sendBucketEmail(payload: EmailPayload): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    console.warn('⚠️ RESEND_API_KEY is not configured. Skipping email.');
+    console.warn('⚠️ BREVO_API_KEY is not configured. Skipping email.');
     return false;
   }
 
@@ -25,7 +25,7 @@ export async function sendBucketEmail(payload: EmailPayload): Promise<boolean> {
   let subject = '';
   let html = '';
 
-  const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  const fromEmail = process.env.EMAIL_FROM || 'hello@venturizer.co';
   const activeTemplate = templateOverride || bucket;
 
   const calUrl = process.env.CALCOM_EVENT_URL || 'https://cal.com/hirdyansh-kumar-venturizer/30min';
@@ -99,37 +99,38 @@ export async function sendBucketEmail(payload: EmailPayload): Promise<boolean> {
     }
   }
 
-  console.log(`📧 Attempting to send email via Resend to: ${to}...`);
-  console.log(`   [Resend Payload] From: ${fromEmail}, Subject: "${subject}"`);
+  console.log(`📧 Attempting to send email via Brevo to: ${to}...`);
+  console.log(`   [Brevo Payload] From: ${fromEmail}, Subject: "${subject}"`);
 
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: fromEmail,
-        to: [to],
+        sender: { name: 'Venturizer', email: fromEmail },
+        to: [{ email: to, name: name }],
         subject: subject,
-        html: html,
+        htmlContent: html,
       }),
     });
 
     const responseText = await res.text();
-    console.log(`📧 Resend API Response Code: ${res.status}`);
-    console.log(`📧 Resend API Response Body: ${responseText}`);
+    console.log(`📧 Brevo API Response Code: ${res.status}`);
+    console.log(`📧 Brevo API Response Body: ${responseText}`);
 
     if (!res.ok) {
-      console.warn(`⚠️ Resend API returned error: ${res.status} - ${responseText}`);
+      console.warn(`⚠️ Brevo API returned error: ${res.status} - ${responseText}`);
       return false;
     }
 
-    console.log(`📧 Resend Email sent successfully to ${to}.`);
+    console.log(`📧 Brevo Email sent successfully to ${to}.`);
     return true;
   } catch (err: any) {
-    console.error('❌ Resend email invocation failed with exception:', err.stack || err);
+    console.error('❌ Brevo email invocation failed with exception:', err.stack || err);
     return false;
   }
 }
