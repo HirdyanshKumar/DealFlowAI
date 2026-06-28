@@ -13,6 +13,9 @@ interface Lead {
   email_sent: boolean;
   alert_sent: boolean;
   created_at: string;
+  meeting_status?: string | null;
+  meeting_link?: string | null;
+  meeting_scheduled_at?: string | null;
 }
 
 interface ResponseDetail {
@@ -26,15 +29,21 @@ interface LeadDetail {
   lead: Lead & {
     score_breakdown: Record<string, any>;
     ai_flags: string[] | null;
+    communication_logs?: Array<{
+      timestamp: string;
+      template: string;
+      message?: string;
+    }> | null;
   };
   responses: ResponseDetail[];
 }
 
 interface AdminDashboardProps {
   navigate: (path: string) => void;
+  initialLeadId?: string;
 }
 
-export default function AdminDashboard({ navigate }: AdminDashboardProps) {
+export default function AdminDashboard({ navigate, initialLeadId }: AdminDashboardProps) {
   // ── Auth States ─────────────────────────────────────────────────────────────
   const [token, setToken] = useState<string | null>(localStorage.getItem('venturizer_token'));
   const [email, setEmail] = useState<string>('');
@@ -53,10 +62,17 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // ── Detail States ───────────────────────────────────────────────────────────
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId || null);
   const [leadDetail, setLeadDetail] = useState<LeadDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState<boolean>(false);
+
+  // ── Manual Email States ──────────────────────────────────────────────────────
+  const [emailTemplate, setEmailTemplate] = useState<string>('hot');
+  const [customMsgText, setCustomMsgText] = useState<string>('');
+  const [emailSending, setEmailSending] = useState<boolean>(false);
+  const [emailSuccess, setEmailSuccess] = useState<boolean>(false);
+  const [emailError, setEmailError] = useState<string>('');
 
   // ── Login Action ────────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
@@ -158,14 +174,31 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
     }
   };
 
-  // Fetch lead detail when selectedLeadId changes
+  // Load initial lead id on token init
   useEffect(() => {
-    if (selectedLeadId) {
+    if (initialLeadId && token) {
+      setSelectedLeadId(initialLeadId);
+    }
+  }, [initialLeadId, token]);
+
+  // Fetch lead detail when selectedLeadId or token changes
+  useEffect(() => {
+    if (selectedLeadId && token) {
       fetchLeadDetail(selectedLeadId);
     } else {
       setLeadDetail(null);
     }
-  }, [selectedLeadId]);
+  }, [selectedLeadId, token]);
+
+  // Sync email template on lead details load
+  useEffect(() => {
+    if (leadDetail) {
+      setEmailTemplate(leadDetail.lead.bucket || 'hot');
+      setCustomMsgText('');
+      setEmailSuccess(false);
+      setEmailError('');
+    }
+  }, [leadDetail]);
 
   // ── Update Pipeline Status ──────────────────────────────────────────────────
   const updateStatus = async (newStatus: string) => {
@@ -198,6 +231,43 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
       alert('Error updating status.');
     } finally {
       setStatusUpdateLoading(false);
+    }
+  };
+
+  // ── Dispatch Manual Follow-up Email ─────────────────────────────────────────
+  const handleSendEmail = async () => {
+    if (!token || !selectedLeadId) return;
+    setEmailSending(true);
+    setEmailSuccess(false);
+    setEmailError('');
+    try {
+      const res = await fetch(`/api/admin/leads/${selectedLeadId}/send-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateType: emailTemplate,
+          customMessage: customMsgText,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setEmailSuccess(true);
+        setCustomMsgText('');
+        // Reload details to update status and logs
+        fetchLeadDetail(selectedLeadId);
+        // Refresh the main leads list to reflect updated statuses
+        fetchLeads();
+      } else {
+        setEmailError(data.error || 'Failed to dispatch email.');
+      }
+    } catch (err) {
+      setEmailError('Network error dispatching email.');
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -437,7 +507,10 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
               leads.map((lead) => (
                 <div
                   key={lead.id}
-                  onClick={() => setSelectedLeadId(lead.id)}
+                  onClick={() => {
+                    setSelectedLeadId(lead.id);
+                    navigate(`/admin/leads/${lead.id}`);
+                  }}
                   className={`p-6 rounded-card bg-white border cursor-pointer hover:border-brand-blue transition-all ${
                     selectedLeadId === lead.id ? 'border-brand-blue ring-1 ring-brand-blue' : 'border-brand-border'
                   }`}
@@ -448,7 +521,12 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
                       <h3 className="font-bold text-lg text-brand-ink leading-snug">{lead.name || 'Incomplete Applicant'}</h3>
                       <p className="text-xs text-brand-caption font-mono mt-0.5">{lead.email || 'no-email-collected'}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                      {lead.meeting_status === 'scheduled' && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-tag text-xs font-bold uppercase">
+                          📅 Scheduled
+                        </span>
+                      )}
                       {getBucketBadge(lead.bucket)}
                       {getStatusBadge(lead.status)}
                     </div>
@@ -500,7 +578,10 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
                     {leadDetail.lead.name || 'Anonymous Applicant'}
                   </h2>
                   <button 
-                    onClick={() => setSelectedLeadId(null)}
+                    onClick={() => {
+                      setSelectedLeadId(null);
+                      navigate('/admin');
+                    }}
                     className="text-brand-caption hover:text-brand-ink text-sm p-1 border rounded cursor-pointer"
                   >
                     Close
@@ -530,6 +611,28 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
 
               {/* Scrollable details */}
               <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                
+                {/* Cal.com Meeting Scheduled Banner */}
+                {leadDetail.lead.meeting_status === 'scheduled' && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-btn text-green-800 text-sm">
+                    <div className="font-bold flex items-center gap-1.5 mb-1">
+                      <span>📅</span> Meeting Scheduled
+                    </div>
+                    <div className="mb-2">
+                      Scheduled for: <strong>{new Date(leadDetail.lead.meeting_scheduled_at!).toLocaleString()}</strong>
+                    </div>
+                    {leadDetail.lead.meeting_link && (
+                      <a 
+                        href={leadDetail.lead.meeting_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-block px-3 py-1 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-xs no-underline transition-all"
+                      >
+                        Join Meeting &rarr;
+                      </a>
+                    )}
+                  </div>
+                )}
                 
                 {/* Score Summary */}
                 <div className="p-4 bg-brand-paper border border-brand-border rounded-btn flex items-center justify-between">
@@ -606,6 +709,82 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Manual follow-up email dispatcher */}
+                <div className="border border-brand-border p-4 bg-brand-paper rounded-btn space-y-4">
+                  <h4 className="text-xs font-bold uppercase text-brand-caption tracking-wider">✉️ Dispatch Manual Email</h4>
+                  
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-brand-caption mb-1">Email Template</label>
+                    <select
+                      value={emailTemplate}
+                      onChange={(e) => setEmailTemplate(e.target.value)}
+                      className="w-full p-2 border border-brand-border bg-white rounded-btn text-xs"
+                    >
+                      <option value="hot">Hot Template (Includes Cal.com link)</option>
+                      <option value="good">Good Template (Under review notice)</option>
+                      <option value="maybe">Maybe Template (Follow-up clarification question)</option>
+                      <option value="low">Low Template (Rejection notice)</option>
+                      <option value="custom">Custom Email (Plain Text)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-brand-caption mb-1">
+                      {emailTemplate === 'custom' ? 'Email Body Message' : 'Custom Message Notes / Template Override (Optional)'}
+                    </label>
+                    <textarea
+                      value={customMsgText}
+                      onChange={(e) => setCustomMsgText(e.target.value)}
+                      rows={3}
+                      placeholder={emailTemplate === 'custom' ? 'Write your custom email body here...' : 'Add notes or custom comments to append...'}
+                      className="w-full p-2.5 border border-brand-border rounded-btn text-xs focus:outline-none focus:border-brand-blue"
+                    />
+                  </div>
+
+                  {emailSuccess && (
+                    <div className="p-2.5 bg-green-50 text-green-700 border border-green-200 rounded text-xs font-semibold">
+                      Email dispatched successfully and status updated!
+                    </div>
+                  )}
+
+                  {emailError && (
+                    <div className="p-2.5 bg-red-50 text-brand-coral border border-brand-coral/20 rounded text-xs font-semibold">
+                      {emailError}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={emailSending}
+                    onClick={handleSendEmail}
+                    className="w-full py-2 bg-brand-blue hover:opacity-95 text-white font-bold rounded-btn text-xs cursor-pointer transition-all disabled:opacity-50"
+                  >
+                    {emailSending ? 'Sending...' : 'Send Follow-up Email'}
+                  </button>
+                </div>
+
+                {/* Communication Log History */}
+                {leadDetail.lead.communication_logs && leadDetail.lead.communication_logs.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-brand-caption mb-3 tracking-wider">Communication Log History</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {leadDetail.lead.communication_logs.map((log, index) => (
+                        <div key={index} className="p-3 bg-brand-paper border border-brand-border rounded-btn text-xs">
+                          <div className="flex justify-between items-center text-[10px] font-mono text-brand-caption mb-1">
+                            <span className="uppercase font-bold text-brand-blue">{log.template} send</span>
+                            <span>{new Date(log.timestamp).toLocaleString()}</span>
+                          </div>
+                          {log.message && (
+                            <p className="text-xs text-brand-ink italic mt-1 bg-white p-2 border border-brand-border/40 rounded">
+                              "{log.message}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
