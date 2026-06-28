@@ -321,6 +321,7 @@ router.post('/:id/complete', async (req: Request, res: Response): Promise<void> 
         score: scoringResult.score,
         bucket: scoringResult.bucket,
         clarificationQuestion,
+        leadId: id,
       });
     }
 
@@ -329,14 +330,18 @@ router.post('/:id/complete', async (req: Request, res: Response): Promise<void> 
         nameToUse,
         lead.flow_type,
         scoringResult.score,
-        aiSummary
+        aiSummary,
+        id
       );
     }
 
-    // Update sent status in database
+    // Update sent status, and set status to contacted if currently new and email succeeded
+    const nextStatus = (emailSent && lead.status === 'new') ? 'contacted' : lead.status;
     await pool.query(
-      `UPDATE leads SET email_sent = $1, alert_sent = $2 WHERE id = $3`,
-      [emailSent, alertSent, id]
+      `UPDATE leads 
+       SET email_sent = $1, alert_sent = $2, status = $3, updated_at = now() 
+       WHERE id = $4`,
+      [emailSent, alertSent, nextStatus, id]
     );
 
   } catch (err: any) {
