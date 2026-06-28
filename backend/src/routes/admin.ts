@@ -201,6 +201,12 @@ router.post('/leads/:id/send-email', requireAdminAuth, async (req: Authenticated
 
     const lead = leadRows[0];
 
+    // Validate that the template matches the lead's bucket (or is custom)
+    if (templateType !== lead.bucket && templateType !== 'custom') {
+      res.status(400).json({ error: `Cannot send ${templateType} template email to a ${lead.bucket} lead.` });
+      return;
+    }
+
     if (!lead.email) {
       res.status(400).json({ error: 'Lead does not have an email address associated.' });
       return;

@@ -723,10 +723,18 @@ export default function AdminDashboard({ navigate, initialLeadId }: AdminDashboa
                       onChange={(e) => setEmailTemplate(e.target.value)}
                       className="w-full p-2 border border-brand-border bg-white rounded-btn text-xs"
                     >
-                      <option value="hot">Hot Template (Includes Cal.com link)</option>
-                      <option value="good">Good Template (Under review notice)</option>
-                      <option value="maybe">Maybe Template (Follow-up clarification question)</option>
-                      <option value="low">Low Template (Rejection notice)</option>
+                      {leadDetail.lead.bucket === 'hot' && (
+                        <option value="hot">Hot Template (Includes Cal.com link)</option>
+                      )}
+                      {leadDetail.lead.bucket === 'good' && (
+                        <option value="good">Good Template (Under review notice)</option>
+                      )}
+                      {leadDetail.lead.bucket === 'maybe' && (
+                        <option value="maybe">Maybe Template (Follow-up clarification question)</option>
+                      )}
+                      {leadDetail.lead.bucket === 'low' && (
+                        <option value="low">Low Template (Rejection notice)</option>
+                      )}
                       <option value="custom">Custom Email (Plain Text)</option>
                     </select>
                   </div>
