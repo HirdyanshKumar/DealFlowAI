@@ -151,7 +151,7 @@ export async function sendDiscordHotAlert(
     return false;
   }
 
-  const dashboardBaseUrl = process.env.DASHBOARD_BASE_URL || 'http://localhost:5173';
+  const dashboardBaseUrl = process.env.FRONTEND_URL || process.env.DASHBOARD_BASE_URL || 'http://localhost:5173';
   const checkNowUrl = `${dashboardBaseUrl}/admin/leads/${leadId}`;
 
   const payload = {
@@ -214,7 +214,7 @@ export async function sendDiscordBookingAlert(
     return false;
   }
 
-  const dashboardBaseUrl = process.env.DASHBOARD_BASE_URL || 'http://localhost:5173';
+  const dashboardBaseUrl = process.env.FRONTEND_URL || process.env.DASHBOARD_BASE_URL || 'http://localhost:5173';
   const checkNowUrl = `${dashboardBaseUrl}/admin/leads/${leadId}`;
 
   const payload = {
