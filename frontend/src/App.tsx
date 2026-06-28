@@ -229,11 +229,8 @@ function App() {
     return (
       <div className="min-h-screen flex flex-col justify-between py-12 px-4 select-none">
         <header className="max-w-4xl mx-auto w-full">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <img src="/logo.webp" alt="Venturizer Logo" className="h-8 w-auto object-contain" />
-            <span className="font-bold text-xl tracking-tight text-brand-blue" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Venturizer
-            </span>
           </div>
         </header>
 
@@ -302,11 +299,8 @@ function App() {
     return (
       <div className="min-h-screen flex flex-col justify-between py-12 px-4">
         <header className="max-w-2xl mx-auto w-full">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <img src="/logo.webp" alt="Venturizer Logo" className="h-8 w-auto object-contain" />
-            <span className="font-bold text-xl tracking-tight text-brand-blue" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Venturizer
-            </span>
           </div>
         </header>
 
@@ -348,11 +342,8 @@ function App() {
           </svg>
           Back
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <img src="/logo.webp" alt="Venturizer Logo" className="h-6 w-auto object-contain" />
-          <span className="font-bold text-lg tracking-tight text-brand-blue" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Venturizer
-          </span>
         </div>
       </header>
 

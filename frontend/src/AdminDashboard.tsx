@@ -325,7 +325,7 @@ export default function AdminDashboard({ navigate, initialLeadId }: AdminDashboa
           <div className="text-center mb-8 flex flex-col items-center">
             <img src="/logo.webp" alt="Venturizer Logo" className="h-12 w-auto object-contain mb-4" />
             <h2 className="text-3xl font-bold text-brand-blue font-display" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Venturizer VC
+              VC Admin Portal
             </h2>
             <p className="text-sm text-brand-caption mt-1">Admin ERP Triage Portal</p>
           </div>
@@ -399,7 +399,7 @@ export default function AdminDashboard({ navigate, initialLeadId }: AdminDashboa
                 className="font-bold text-xl text-brand-blue tracking-tight" 
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Venturizer ERP
+                ERP
               </span>
             </div>
             <span className="px-2 py-0.5 bg-brand-paper border border-brand-border text-[10px] font-mono rounded text-brand-caption">

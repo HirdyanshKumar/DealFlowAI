@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+
+# Environment files
+.env
+**/.env
+.env*.local
+
+# System files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Scripts
+redate_commits.sh
+start_servers.sh
